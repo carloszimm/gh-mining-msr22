@@ -19,3 +19,13 @@ func WriteJSON(path string, data interface{}) {
 	err = os.WriteFile(path+".json", j, 0644)
 	CheckError(err)
 }
+
+func WriteFolder(folderPath string) {
+	err := os.MkdirAll(folderPath, os.ModePerm)
+	CheckError(err)
+}
+
+func RemoveAllFolders(folderPath string) {
+	err := os.RemoveAll(folderPath)
+	CheckError(err)
+}
