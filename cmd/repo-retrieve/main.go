@@ -5,9 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,18 +18,10 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type RespFile struct {
-	SHA      string `json:"sha"`
-	NodeID   string `json:"node_id"`
-	Size     int    `json:"size"`
-	Url      string `json:"url"`
-	Content  string `json:"content"`
-	Encoding string `json:"encoding"`
-}
-
 type RepoInfo struct {
 	Repository github.Repository
-	Tree       *github.Tree
+	Entry      *github.TreeEntry
+	Blob       *github.Blob
 }
 
 var FILE_EXTENSIONS = map[string]map[string]struct{}{
@@ -56,19 +46,20 @@ func setupPipeline(repos []github.Repository) <-chan struct{} {
 	outRepo := processRepositories(repos)
 
 	var outsRepoInfo []<-chan *RepoInfo
-	for _, token := range cfg.Tokens {
-		outsRepoInfo = append(outsRepoInfo, githuWorker(token, outRepo))
+	for i, token := range cfg.Tokens {
+		outsRepoInfo = append(outsRepoInfo, githuWorker(i, token, cfg.Distribution, outRepo))
 	}
 
 	var finalOutputs []<-chan struct{}
-	for i, outRepoInfo := range outsRepoInfo {
+	for _, outRepoInfo := range outsRepoInfo {
 		for j := 0; j < 10; j++ {
-			finalOutputs = append(finalOutputs, treeWorker((10*i)+j, cfg.Distribution, outRepoInfo))
+			finalOutputs = append(finalOutputs, processContent(cfg.Distribution, outRepoInfo))
 		}
 	}
 	return mergeChannels(finalOutputs...)
 }
 
+// based on https://go.dev/blog/pipelines
 func mergeChannels(cs ...<-chan struct{}) <-chan struct{} {
 	var wg sync.WaitGroup
 	out := make(chan struct{})
@@ -106,7 +97,7 @@ func processRepositories(repos []github.Repository) <-chan github.Repository {
 	return out
 }
 
-func githuWorker(token string, in <-chan github.Repository) <-chan *RepoInfo {
+func githuWorker(id int, token string, dist string, in <-chan github.Repository) <-chan *RepoInfo {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
@@ -119,20 +110,44 @@ func githuWorker(token string, in <-chan github.Repository) <-chan *RepoInfo {
 	go func() {
 		for repo := range in {
 			if _, ok := RX_USERS[repo.GetOwner().GetLogin()]; !ok {
+				log.Printf("Worker %d processing %s\n", id, repo.GetFullName())
+				var repoTree *github.Tree
 				for {
-					repoTree, resp, err := client.Git.GetTree(ctx,
+					tree, resp, err := client.Git.GetTree(ctx,
 						repo.GetOwner().GetLogin(), repo.GetName(), repo.GetDefaultBranch(), true)
 					if err != nil {
 						if _, ok := err.(*github.RateLimitError); ok {
-							d := resp.Rate.Reset.Time.Sub(time.Now())
+							d := time.Until(resp.Rate.Reset.Time)
+							log.Println("worker", id, "went to sleep for", fmt.Sprint(d.Minutes()), "minutes")
 							time.Sleep(d)
 							continue
 						} else {
 							log.Fatal(err)
 						}
-					} else {
-						out <- &RepoInfo{Repository: repo, Tree: repoTree}
-						break
+					}
+					repoTree = tree
+					break
+				}
+				for _, entry := range repoTree.Entries {
+					if entry.GetType() == "blob" {
+						fileExtension := filepath.Ext(entry.GetPath())
+						if _, ok := FILE_EXTENSIONS[dist][fileExtension]; ok {
+							for {
+								blob, resp, err := client.Git.GetBlob(ctx, repo.GetOwner().GetLogin(), repo.GetName(), entry.GetSHA())
+								if err != nil {
+									if _, ok := err.(*github.RateLimitError); ok {
+										d := time.Until(resp.Rate.Reset.Time)
+										log.Println("worker", id, "went to sleep for", fmt.Sprint(d.Minutes()), "minutes")
+										time.Sleep(d)
+										continue
+									} else {
+										log.Fatal(err)
+									}
+								}
+								out <- &RepoInfo{Repository: repo, Entry: entry, Blob: blob}
+								break
+							}
+						}
 					}
 				}
 
@@ -143,41 +158,20 @@ func githuWorker(token string, in <-chan github.Repository) <-chan *RepoInfo {
 	return out
 }
 
-func treeWorker(id int, dist string, in <-chan *RepoInfo) <-chan struct{} {
+func processContent(dist string, in <-chan *RepoInfo) <-chan struct{} {
 	out := make(chan struct{})
 	go func() {
 		for repoInfo := range in {
-			log.Printf("Worker %d processing %s\n", id, repoInfo.Repository.GetFullName())
-			for _, entry := range repoInfo.Tree.Entries {
-				if entry.GetType() == "blob" {
-					fileExtension := filepath.Ext(entry.GetPath())
-					if _, ok := FILE_EXTENSIONS[dist][fileExtension]; ok {
-						resp, err := http.Get(entry.GetURL())
-						util.CheckError(err)
+			sDec, err := base64.StdEncoding.DecodeString(string(repoInfo.Blob.GetContent()))
+			util.CheckError(err)
 
-						body, err := ioutil.ReadAll(resp.Body)
-						util.CheckError(err)
+			basePath := filepath.Join("assets", "repo-retrieval", dist,
+				fmt.Sprintf("%s_%d", repoInfo.Repository.GetName(), repoInfo.Repository.GetID()))
+			util.WriteFolder(filepath.Join(basePath, filepath.Dir(repoInfo.Entry.GetPath())))
 
-						var responseFile RespFile
-						err = json.Unmarshal(body, &responseFile)
-						util.CheckError(err)
+			err = os.WriteFile(filepath.Join(basePath, repoInfo.Entry.GetPath()), sDec, 0644)
+			util.CheckError(err)
 
-						if responseFile.Encoding != "base64" {
-							log.Println(responseFile.Encoding)
-						}
-
-						sDec, _ := base64.StdEncoding.DecodeString(string(responseFile.Content))
-
-						basePath := filepath.Join("assets", "repo-retrieval", dist,
-							fmt.Sprintf("%s_%d", repoInfo.Repository.GetName(), repoInfo.Repository.GetID()))
-						util.WriteFolder(filepath.Join(basePath, filepath.Dir(entry.GetPath())))
-
-						err = os.WriteFile(filepath.Join(basePath, entry.GetPath()), sDec, 0644)
-						util.CheckError(err)
-
-					}
-				}
-			}
 			out <- struct{}{}
 		}
 		close(out)
