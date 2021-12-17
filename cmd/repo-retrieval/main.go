@@ -15,41 +15,67 @@ import (
 
 	"github.com/carloszimm/github-mining/internal/config"
 	"github.com/carloszimm/github-mining/internal/util"
+	"github.com/golang-module/carbon/v2"
 	"github.com/google/go-github/v41/github"
 	"golang.org/x/oauth2"
 )
 
 var RX_USERS = map[string]struct{}{
-	"ReactiveX": {}, "dotnet": {},
-	"neuecc": {}, "bjornbytes": {}, "alfert": {},
-	"Reactive-Extensions": {}}
+	"ReactiveX":           {},
+	"Reactive-Extensions": {},
+	"dotnet":              {},
+	"neuecc":              {},
+	"bjornbytes":          {},
+	"alfert":              {},
+	"kzaher":              {},
+}
+
+const ARCHIVES_FOLDER = "archives"
 
 var (
 	REPO_SEARCH_PATH    = filepath.Join("assets", "repo-search")
 	REPO_RETRIEVAL_PATH = filepath.Join("assets", "repo-retrieval")
 )
 
-func setup(repos []github.Repository) <-chan struct{} {
+type Info struct {
+	Owner      string
+	Repo       string
+	Branch     string
+	FileName   string
+	ArchiveUrl string
+}
+
+type Summary struct {
+	StartTime      string
+	EndTime        string
+	TotalRepos     int
+	ProcessedRepos int
+}
+
+func setup(repos []github.Repository) <-chan *Info {
 	cfg := config.GetConfigInstance()
 
 	path := filepath.Join(REPO_RETRIEVAL_PATH, cfg.Distribution)
 	util.RemoveAllFolders(path)
 	util.WriteFolder(path)
 
+	archivesPath := filepath.Join(path, ARCHIVES_FOLDER)
+
 	outRepo := processRepos(repos)
+	// channel used to refeed the pipeline in case of error (rate limiting)
 	retroInput := make(chan github.Repository, 20)
 
 	inWorkers := mergeChannels(outRepo, retroInput)
-	outWorkers := make(chan struct{}, 20)
+	outWorkers := make(chan *Info, 20)
 
+	// creates workers
 	for i, token := range cfg.Tokens {
-		githubWorker(i, token, cfg.Distribution, inWorkers, retroInput, outWorkers)
+		githubWorker(i, token, archivesPath, inWorkers, retroInput, outWorkers)
 	}
 	// creates unauthenticated worker
-	githubWorker(len(cfg.Tokens), "", cfg.Distribution, inWorkers, retroInput, outWorkers)
+	githubWorker(len(cfg.Tokens), "", archivesPath, inWorkers, retroInput, outWorkers)
 
 	return outWorkers
-
 }
 
 func processRepos(repos []github.Repository) chan github.Repository {
@@ -90,8 +116,8 @@ func mergeChannels(cs ...chan github.Repository) <-chan github.Repository {
 	return out
 }
 
-func githubWorker(id int, token string, dist string, in <-chan github.Repository,
-	retroInput chan github.Repository, out chan struct{}) {
+func githubWorker(id int, token string, archivesPath string, in <-chan github.Repository,
+	retroInput chan github.Repository, out chan *Info) {
 	ctx := context.Background()
 
 	var tc *http.Client
@@ -119,40 +145,106 @@ func githubWorker(id int, token string, dist string, in <-chan github.Repository
 				go func() {
 					retroInput <- repo
 				}()
-				if _, ok := err.(*github.RateLimitError); ok {
-					d := time.Until(resp.Rate.Reset.Time)
-					log.Println("worker", id, "went to sleep for", fmt.Sprint(d.Minutes()), "minutes")
-					time.Sleep(d)
-				} else {
-					// checks the Rate Limiting API in case the above doesn't work properly
-					rateLimit, _, errRLimit := client.RateLimits(ctx)
-					if err == nil {
-						coreLimit := rateLimit.GetCore()
-						if coreLimit.Remaining == 0 {
-							d := time.Until(coreLimit.Reset.Time)
-							log.Println("worker", id, "went to sleep for", fmt.Sprint(d.Minutes()), "minutes")
-							time.Sleep(d)
-						}
-					} else {
-						// log errors
-						log.Println(err)
-						log.Println(errRLimit)
-					}
-				}
+				handleErrorWorkers(err, id, resp, client)
 			} else {
 				body, err := ioutil.ReadAll(resp.Body)
 				util.CheckError(err)
 
-				basePath := filepath.Join(REPO_RETRIEVAL_PATH, dist,
-					strings.Split(resp.Header["Content-Disposition"][0], "=")[1])
+				fileName := strings.Split(resp.Header["Content-Disposition"][0], "=")[1]
 
-				err = os.WriteFile(basePath, body, 0644)
+				err = os.WriteFile(filepath.Join(REPO_RETRIEVAL_PATH, archivesPath, fileName), body, 0644)
 				util.CheckError(err)
 
-				out <- struct{}{}
+				out <- &Info{repo.GetOwner().GetLogin(), repo.GetName(),
+					repo.GetDefaultBranch(), fileName, repo.GetArchiveURL()}
 			}
 		}
 	}()
+}
+
+func retrieveBranchInfoWorker(id int, token string, archivesPath string, infos <-chan *Info, results chan<- struct{}) {
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: token},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+	client := github.NewClient(tc)
+	for i := range infos {
+		for {
+			branchInfo, resp, err := client.Repositories.GetBranch(ctx, i.Owner, i.Repo, i.Branch, true)
+			if err != nil {
+				handleErrorWorkers(err, id, resp, client)
+				continue
+			}
+			url := strings.Replace(strings.Replace(i.ArchiveUrl, "{archive_format}", "tarball", 1),
+				"{/ref}", "/"+branchInfo.GetCommit().GetSHA(), 1)
+			d1 := []byte(url)
+			err = os.WriteFile(filepath.Join(REPO_RETRIEVAL_PATH, archivesPath, i.FileName+".txt"), d1, 0644)
+			util.CheckError(err)
+
+			results <- struct{}{}
+			break
+		}
+	}
+}
+
+func processFileInfos(fileInfos []*Info) {
+	cfg := config.GetConfigInstance()
+	archivesPath := filepath.Join(REPO_RETRIEVAL_PATH, cfg.Distribution, ARCHIVES_FOLDER)
+
+	infos := make(chan *Info, 20)
+	results := make(chan struct{}, 20)
+
+	// creates workers
+	for i, token := range cfg.Tokens {
+		go retrieveBranchInfoWorker(i, token, archivesPath, infos, results)
+	}
+
+	go func() {
+		for _, info := range fileInfos {
+			infos <- info
+		}
+	}()
+
+	for range fileInfos {
+		<-results
+	}
+}
+
+func handleErrorWorkers(err error, id int, resp *github.Response, client *github.Client) {
+	ctx := context.Background()
+
+	if _, ok := err.(*github.RateLimitError); ok {
+		d := time.Until(resp.Rate.Reset.Time)
+		log.Println("worker", id, "went to sleep for", fmt.Sprint(d.Minutes()), "minutes")
+		time.Sleep(d)
+	} else {
+		// checks the Rate Limiting API in case the above doesn't work properly
+		rateLimit, _, errRLimit := client.RateLimits(ctx)
+		if err == nil {
+			coreLimit := rateLimit.GetCore()
+			if coreLimit.Remaining == 0 {
+				d := time.Until(coreLimit.Reset.Time)
+				log.Println("worker", id, "went to sleep for", fmt.Sprint(d.Minutes()), "minutes")
+				time.Sleep(d)
+			}
+		} else {
+			// log errors
+			log.Println(err)
+			log.Println(errRLimit)
+		}
+	}
+}
+
+func writeSummary(path string, summ *Summary) {
+	template := "Start Time: %v\nEnd Time: %v\nTotal of Repositories: %v-%v\n"
+	template += "Repositories Processed: %v"
+	text := fmt.Sprintf(template, summ.StartTime, summ.EndTime, summ.TotalRepos, summ.ProcessedRepos)
+
+	fileName := fmt.Sprintf("summary_%s.txt", strings.ReplaceAll(carbon.Now().ToDateTimeString(), ":", "-"))
+
+	err := os.WriteFile(filepath.Join(path, fileName), []byte(text), 0644)
+	util.CheckError(err)
 }
 
 func main() {
@@ -161,8 +253,12 @@ func main() {
 	c, err := os.ReadDir(REPO_SEARCH_PATH)
 	util.CheckError(err)
 
+	summ := Summary{
+		StartTime: carbon.Now().ToDayDateTimeString()}
+
 	var repos []github.Repository
 	for _, entry := range c {
+		// loops through folders entries and stop as soon as the entry hits the distribution being looked for
 		if !entry.IsDir() && strings.Split(entry.Name(), "_")[0] == cfg.Distribution {
 			dat, err := os.ReadFile(filepath.Join(REPO_SEARCH_PATH, entry.Name()))
 			util.CheckError(err)
@@ -181,13 +277,26 @@ func main() {
 				filteredRepos = append(filteredRepos, repo)
 			}
 		}
+		summ.TotalRepos, summ.ProcessedRepos = len(repos), len(filteredRepos)
+
 		out := setup(filteredRepos)
-
-		for i := 0; i < len(filteredRepos); i++ {
-			<-out
+		// writes infos about the archives as txt to avoid uploading all repos downloaded
+		var (
+			filesInfos []*Info
+			fileInfo   *Info
+		)
+		for range filteredRepos {
+			fileInfo = <-out
+			filesInfos = append(filesInfos, fileInfo)
 		}
+		processFileInfos(filesInfos)
+		// writes summary
+		summ.EndTime = carbon.Now().ToDayDateTimeString()
+		path := filepath.Join(REPO_RETRIEVAL_PATH, cfg.Distribution)
+		writeSummary(path, &summ)
 
-		log.Printf("Processed %d from %d repositories\n", len(filteredRepos), len(repos))
+		log.Printf("Processed %d from %d repositories\n", summ.ProcessedRepos, summ.TotalRepos)
+		log.Printf("Results available at: %s", path)
 	} else {
 		log.Println("No repositories to be processed")
 	}
