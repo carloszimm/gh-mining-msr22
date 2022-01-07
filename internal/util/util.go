@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strings"
+
+	"github.com/golang-module/carbon/v2"
 )
 
 func CheckError(err error) {
@@ -28,4 +31,8 @@ func WriteFolder(folderPath string) {
 func RemoveAllFolders(folderPath string) {
 	err := os.RemoveAll(folderPath)
 	CheckError(err)
+}
+
+func NowDateTimeFormatted() string {
+	return strings.ReplaceAll(carbon.Now().ToDateTimeString(), ":", "-")
 }

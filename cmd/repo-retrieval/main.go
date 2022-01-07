@@ -11,9 +11,10 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/carloszimm/github-mining/internal/config"
+	errorHandling "github.com/carloszimm/github-mining/internal/error-handling"
+	"github.com/carloszimm/github-mining/internal/types"
 	"github.com/carloszimm/github-mining/internal/util"
 	"github.com/golang-module/carbon/v2"
 	"github.com/google/go-github/v41/github"
@@ -37,14 +38,6 @@ var (
 	REPO_RETRIEVAL_PATH = filepath.Join("assets", "repo-retrieval")
 )
 
-type Info struct {
-	Owner      string
-	Repo       string
-	Branch     string
-	FileName   string
-	ArchiveUrl string
-}
-
 type Summary struct {
 	StartTime      string
 	EndTime        string
@@ -52,7 +45,7 @@ type Summary struct {
 	ProcessedRepos int
 }
 
-func setup(repos []github.Repository) <-chan *Info {
+func setup(repos []github.Repository) <-chan *types.Info {
 	cfg := config.GetConfigInstance()
 
 	path := filepath.Join(REPO_RETRIEVAL_PATH, cfg.Distribution)
@@ -66,7 +59,7 @@ func setup(repos []github.Repository) <-chan *Info {
 	retroInput := make(chan github.Repository, 20)
 
 	inWorkers := mergeChannels(outRepo, retroInput)
-	outWorkers := make(chan *Info, 20)
+	outWorkers := make(chan *types.Info, 20)
 
 	// creates workers
 	for i, token := range cfg.Tokens {
@@ -117,7 +110,7 @@ func mergeChannels(cs ...chan github.Repository) <-chan github.Repository {
 }
 
 func githubWorker(id int, token string, archivesPath string, in <-chan github.Repository,
-	retroInput chan github.Repository, out chan *Info) {
+	retroInput chan github.Repository, out chan *types.Info) {
 	ctx := context.Background()
 
 	var tc *http.Client
@@ -145,7 +138,7 @@ func githubWorker(id int, token string, archivesPath string, in <-chan github.Re
 				go func() {
 					retroInput <- repo
 				}()
-				handleErrorWorkers(err, id, resp, client)
+				errorHandling.HandleErrorWorkers(err, id, resp, client)
 			} else {
 				body, err := ioutil.ReadAll(resp.Body)
 				util.CheckError(err)
@@ -155,14 +148,15 @@ func githubWorker(id int, token string, archivesPath string, in <-chan github.Re
 				err = os.WriteFile(filepath.Join(REPO_RETRIEVAL_PATH, archivesPath, fileName), body, 0644)
 				util.CheckError(err)
 
-				out <- &Info{repo.GetOwner().GetLogin(), repo.GetName(),
-					repo.GetDefaultBranch(), fileName, repo.GetArchiveURL()}
+				out <- &types.Info{Owner: repo.GetOwner().GetLogin(), RepositoryName: repo.GetName(),
+					RepositoryFullName: repo.GetFullName(), Branch: repo.GetDefaultBranch(),
+					FileName: fileName, FileSize: len(body), ArchiveUrl: repo.GetArchiveURL()}
 			}
 		}
 	}()
 }
 
-func retrieveBranchInfoWorker(id int, token string, archivesPath string, infos <-chan *Info, results chan<- struct{}) {
+func retrieveBranchInfoWorker(id int, token string, infos <-chan *types.Info, results chan<- types.Info) {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
@@ -171,33 +165,31 @@ func retrieveBranchInfoWorker(id int, token string, archivesPath string, infos <
 	client := github.NewClient(tc)
 	for i := range infos {
 		for {
-			branchInfo, resp, err := client.Repositories.GetBranch(ctx, i.Owner, i.Repo, i.Branch, true)
+			branchInfo, resp, err :=
+				client.Repositories.GetBranch(ctx, i.Owner, i.RepositoryName, i.Branch, true)
 			if err != nil {
-				handleErrorWorkers(err, id, resp, client)
+				errorHandling.HandleErrorWorkers(err, id, resp, client)
 				continue
 			}
-			url := strings.Replace(strings.Replace(i.ArchiveUrl, "{archive_format}", "tarball", 1),
+			i.ArchiveUrl = strings.Replace(strings.Replace(i.ArchiveUrl, "{archive_format}", "tarball", 1),
 				"{/ref}", "/"+branchInfo.GetCommit().GetSHA(), 1)
-			d1 := []byte(url)
-			err = os.WriteFile(filepath.Join(REPO_RETRIEVAL_PATH, archivesPath, i.FileName+".txt"), d1, 0644)
-			util.CheckError(err)
 
-			results <- struct{}{}
+			results <- *i
 			break
 		}
 	}
 }
 
-func processFileInfos(fileInfos []*Info) {
+func processFileInfos(fileInfos []*types.Info) {
 	cfg := config.GetConfigInstance()
-	archivesPath := filepath.Join(REPO_RETRIEVAL_PATH, cfg.Distribution, ARCHIVES_FOLDER)
+	fileName := "list_of_files"
 
-	infos := make(chan *Info, 20)
-	results := make(chan struct{}, 20)
+	infos := make(chan *types.Info, 20)
+	results := make(chan types.Info, 20)
 
 	// creates workers
 	for i, token := range cfg.Tokens {
-		go retrieveBranchInfoWorker(i, token, archivesPath, infos, results)
+		go retrieveBranchInfoWorker(i, token, infos, results)
 	}
 
 	go func() {
@@ -206,34 +198,12 @@ func processFileInfos(fileInfos []*Info) {
 		}
 	}()
 
+	var newFileInfos []types.Info
 	for range fileInfos {
-		<-results
+		newFileInfos = append(newFileInfos, <-results)
 	}
-}
 
-func handleErrorWorkers(err error, id int, resp *github.Response, client *github.Client) {
-	ctx := context.Background()
-
-	if _, ok := err.(*github.RateLimitError); ok {
-		d := time.Until(resp.Rate.Reset.Time)
-		log.Println("worker", id, "went to sleep for", fmt.Sprint(d.Minutes()), "minutes")
-		time.Sleep(d)
-	} else {
-		// checks the Rate Limiting API in case the above doesn't work properly
-		rateLimit, _, errRLimit := client.RateLimits(ctx)
-		if err == nil {
-			coreLimit := rateLimit.GetCore()
-			if coreLimit.Remaining == 0 {
-				d := time.Until(coreLimit.Reset.Time)
-				log.Println("worker", id, "went to sleep for", fmt.Sprint(d.Minutes()), "minutes")
-				time.Sleep(d)
-			}
-		} else {
-			// log errors
-			log.Println(err)
-			log.Println(errRLimit)
-		}
-	}
+	util.WriteJSON(filepath.Join(REPO_RETRIEVAL_PATH, cfg.Distribution, fileName), newFileInfos)
 }
 
 func writeSummary(path string, summ *Summary) {
@@ -241,7 +211,7 @@ func writeSummary(path string, summ *Summary) {
 	template += "Repositories Processed: %v"
 	text := fmt.Sprintf(template, summ.StartTime, summ.EndTime, summ.TotalRepos, summ.ProcessedRepos)
 
-	fileName := fmt.Sprintf("summary_%s.txt", strings.ReplaceAll(carbon.Now().ToDateTimeString(), ":", "-"))
+	fileName := fmt.Sprintf("summary_%s.txt", util.NowDateTimeFormatted())
 
 	err := os.WriteFile(filepath.Join(path, fileName), []byte(text), 0644)
 	util.CheckError(err)
@@ -258,7 +228,7 @@ func main() {
 
 	var repos []github.Repository
 	for _, entry := range c {
-		// loops through folders entries and stop as soon as the entry hits the distribution being looked for
+		// loops through folder entries and stop as soon as the entry hits the distribution being looked for
 		if !entry.IsDir() && strings.Split(entry.Name(), "_")[0] == cfg.Distribution {
 			dat, err := os.ReadFile(filepath.Join(REPO_SEARCH_PATH, entry.Name()))
 			util.CheckError(err)
@@ -280,14 +250,11 @@ func main() {
 		summ.TotalRepos, summ.ProcessedRepos = len(repos), len(filteredRepos)
 
 		out := setup(filteredRepos)
-		// writes infos about the archives as txt to avoid uploading all repos downloaded
-		var (
-			filesInfos []*Info
-			fileInfo   *Info
-		)
+
+		// writes infos about the archives as JSON to avoid uploading all downloaded repos
+		var filesInfos []*types.Info
 		for range filteredRepos {
-			fileInfo = <-out
-			filesInfos = append(filesInfos, fileInfo)
+			filesInfos = append(filesInfos, <-out)
 		}
 		processFileInfos(filesInfos)
 		// writes summary
