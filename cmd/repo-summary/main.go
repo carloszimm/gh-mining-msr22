@@ -16,12 +16,12 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const (
-	FILE_NAME = "summary.txt"
-	STARS     = 10
-)
+const STARS = 10
 
-var REPO_SUMMARY_PATH = filepath.Join("assets", "repo-summary", FILE_NAME)
+var (
+	FILE_NAME         = fmt.Sprintf("repos summary_%s.txt", util.NowDateTimeFormatted())
+	REPO_SUMMARY_PATH = filepath.Join("assets", "repo-summary", FILE_NAME)
+)
 
 var DISTRIBUTIONS [18]string = [18]string{
 	"RxJava", "RxJS", "Rx.NET", "UniRx", "RxScala", "RxClojure",
