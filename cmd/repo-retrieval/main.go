@@ -50,9 +50,8 @@ func setup(repos []github.Repository) <-chan *types.Info {
 
 	path := filepath.Join(REPO_RETRIEVAL_PATH, cfg.Distribution)
 	util.RemoveAllFolders(path)
-	util.WriteFolder(path)
-
 	archivesPath := filepath.Join(path, ARCHIVES_FOLDER)
+	util.WriteFolder(archivesPath)
 
 	outRepo := processRepos(repos)
 	// channel used to refeed the pipeline in case of error (rate limiting)
