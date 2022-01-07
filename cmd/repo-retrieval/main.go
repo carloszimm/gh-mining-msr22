@@ -206,7 +206,7 @@ func processFileInfos(fileInfos []*types.Info) {
 }
 
 func writeSummary(path string, summ *Summary) {
-	template := "Start Time: %v\nEnd Time: %v\nTotal of Repositories: %v-%v\n"
+	template := "Start Time: %v\nEnd Time: %v\nTotal of Repositories: %v\n"
 	template += "Repositories Processed: %v"
 	text := fmt.Sprintf(template, summ.StartTime, summ.EndTime, summ.TotalRepos, summ.ProcessedRepos)
 
