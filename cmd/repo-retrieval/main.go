@@ -144,7 +144,7 @@ func githubWorker(id int, token string, archivesPath string, in <-chan github.Re
 
 				fileName := strings.Split(resp.Header["Content-Disposition"][0], "=")[1]
 
-				err = os.WriteFile(filepath.Join(REPO_RETRIEVAL_PATH, archivesPath, fileName), body, 0644)
+				err = os.WriteFile(filepath.Join(archivesPath, fileName), body, 0644)
 				util.CheckError(err)
 
 				out <- &types.Info{Owner: repo.GetOwner().GetLogin(), RepositoryName: repo.GetName(),
