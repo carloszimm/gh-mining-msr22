@@ -3,14 +3,15 @@ module github.com/carloszimm/github-mining
 go 1.17
 
 require (
+	github.com/dlclark/regexp2 v1.4.0
 	github.com/golang-module/carbon/v2 v2.0.1
 	github.com/google/go-github/v41 v41.0.0
+	github.com/iancoleman/orderedmap v0.2.0
 	github.com/olekukonko/tablewriter v0.0.5
 	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
 )
 
 require (
-	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
