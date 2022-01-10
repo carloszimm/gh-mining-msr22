@@ -4,9 +4,19 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/carloszimm/github-mining/internal/util"
 )
+
+var (
+	REPO_RETRIVAL_PATH    = filepath.Join("assets", "repo-retrieval")
+	OPERATORS_PATH        = filepath.Join("assets", "operators")
+	OPERATORS_SEARCH_PATH = filepath.Join("assets", "operators-search")
+)
+var PROCESSING_WORKERS = runtime.NumCPU()
+
+const ARCHIVES_FOLDER = "archives"
 
 type Config struct {
 	Tokens         []string `json:"tokens" validate:"required"`
