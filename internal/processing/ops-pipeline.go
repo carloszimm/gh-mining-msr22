@@ -29,7 +29,7 @@ var (
 
 func SetupOpsPipeline( /* archInfosMap map[string]string, */
 	allowedExtensions map[string]struct{}, operators types.Operators,
-	result map[string]*orderedmap.OrderedMap) <-chan map[string]*orderedmap.OrderedMap {
+	result *orderedmap.OrderedMap) <-chan *orderedmap.OrderedMap {
 	// create workers from the list of operators
 	inOps, outOps := operators.CreateWorkerOps()
 
@@ -191,20 +191,26 @@ func dispatchToOpsCounters(in <-chan interface{}, inOps []chan *types.ContentMsg
 }
 
 func gatherResults(outOps <-chan interface{},
-	result map[string]*orderedmap.OrderedMap) <-chan map[string]*orderedmap.OrderedMap {
-	out := make(chan map[string]*orderedmap.OrderedMap)
+	result *orderedmap.OrderedMap) <-chan *orderedmap.OrderedMap {
+	out := make(chan *orderedmap.OrderedMap)
 	go func() {
 		for msg := range outOps {
 			countMsg := msg.(types.CountMsg)
-			countI, _ := result[countMsg.FileName].Get(countMsg.OperatorCount.Operator)
-			count := countI.(int)
-			result[countMsg.FileName].Set(countMsg.OperatorCount.Operator,
+			v, _ := result.Get(countMsg.FileName)
+			mapEntry := v.(*orderedmap.OrderedMap)
+			v, _ = mapEntry.Get(countMsg.OperatorCount.Operator)
+			count := v.(int)
+			mapEntry.Set(countMsg.OperatorCount.Operator,
 				count+countMsg.OperatorCount.Total)
 		}
 		log.Println("General processing finished!")
-		// sort results by operators' names
-		for _, val := range result {
-			val.SortKeys(sort.Strings)
+		// sort results
+		result.SortKeys(sort.Strings)
+		// sort each entry by operators' names
+		for _, k := range result.Keys() {
+			v, _ := result.Get(k)
+			entry := v.(*orderedmap.OrderedMap)
+			entry.SortKeys(sort.Strings)
 		}
 		out <- result
 		close(out)

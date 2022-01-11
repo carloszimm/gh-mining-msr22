@@ -74,12 +74,14 @@ func main() {
 	err = json.Unmarshal(dat, &archivesInfos)
 	util.CheckError(err)
 
-	result := make(map[string]*orderedmap.OrderedMap)
+	result := orderedmap.New()
 	// initializes result
 	for _, val := range archivesInfos {
-		result[val.FileName] = orderedmap.New()
+		result.Set(val.FileName, orderedmap.New())
 		for _, op := range operators.GetOperators() {
-			result[val.FileName].Set(op, 0)
+			v, _ := result.Get(val.FileName)
+			entry := v.(*orderedmap.OrderedMap)
+			entry.Set(op, 0)
 		}
 	}
 
