@@ -91,6 +91,7 @@ func main() {
 
 	log.Printf("Search for operators finished at: %s\n", carbon.Now().ToDayDateTimeString())
 	log.Println("Writing Results...")
+	util.WriteFolder(config.OPERATORS_SEARCH_PATH)
 	util.WriteJSON(filepath.Join(config.OPERATORS_SEARCH_PATH, strings.ToLower(cfg.Distribution)), result)
 	log.Println("Done!")
 }
