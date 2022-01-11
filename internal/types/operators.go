@@ -28,16 +28,6 @@ type OperatorCount struct {
 	Total    int
 }
 
-// type to hold operators' statistics (used only by the end of the process)
-type OperatorStats struct {
-	Sum    int
-	Mean   float64
-	StdDev float64
-	Min    int
-	Max    int
-	Median int
-}
-
 // type used to hold operators' names and generate workers per request
 type Operators struct {
 	Dist          string
@@ -99,17 +89,17 @@ func createCounter(opName string) func(string) int {
 	}
 }
 
+func CloseAllInOps(inOps []chan *ContentMsg) {
+	for _, in := range inOps {
+		close(in)
+	}
+}
+
 // sort operator count by operators' names
 func SortOperatorsCount(opCount []OperatorCount) {
 	sort.SliceStable(opCount, func(i, j int) bool {
 		return opCount[i].Operator < opCount[j].Operator
 	})
-}
-
-func CloseAllInOps(inOps []chan *ContentMsg) {
-	for _, in := range inOps {
-		close(in)
-	}
 }
 
 // returns a map containing operator name as key and an array of total counts as value

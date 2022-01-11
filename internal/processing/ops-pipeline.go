@@ -63,7 +63,7 @@ func SetupOpsPipeline( /* archInfosMap map[string]string, */
 
 	dispatchToOpsCounters(out, inOps)
 
-	return gatherResults(outOps, len(operators.GetOperators()), result)
+	return gatherResults(outOps, result)
 }
 
 func processArchives(dist string) <-chan interface{} {
@@ -191,7 +191,7 @@ func dispatchToOpsCounters(in <-chan interface{}, inOps []chan *types.ContentMsg
 }
 
 func gatherResults(outOps <-chan interface{},
-	maxOperators int, result map[string]*orderedmap.OrderedMap) <-chan map[string]*orderedmap.OrderedMap {
+	result map[string]*orderedmap.OrderedMap) <-chan map[string]*orderedmap.OrderedMap {
 	out := make(chan map[string]*orderedmap.OrderedMap)
 	go func() {
 		for msg := range outOps {
