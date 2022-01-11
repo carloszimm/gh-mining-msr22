@@ -23,7 +23,7 @@ var ALLOWED_EXTENSIONS = map[string][]string{
 
 type LangExtension struct {
 	Name         string   `json:"name"`
-	TypeLanguage string   `json:"type"`
+	TypeLanguage string   `json:"-"`
 	Extensions   []string `json:"extensions"`
 }
 
@@ -59,7 +59,7 @@ func main() {
 	opDir, err := os.ReadDir(config.OPERATORS_PATH)
 	util.CheckError(err)
 
-	var operators types.Operators
+	var operators *types.Operators
 	for _, d := range opDir {
 		if !d.IsDir() && strings.Contains(strings.ToLower(d.Name()), strings.ToLower(cfg.Distribution)) {
 			operators = types.CreateOperators(d.Name(), cfg.Distribution)
@@ -70,7 +70,7 @@ func main() {
 	dat, err := os.ReadFile(filepath.Join(config.REPO_RETRIVAL_PATH, cfg.Distribution, "list_of_files.json"))
 	util.CheckError(err)
 
-	var archivesInfos []types.Info
+	var archivesInfos []types.InfoFile
 	err = json.Unmarshal(dat, &archivesInfos)
 	util.CheckError(err)
 

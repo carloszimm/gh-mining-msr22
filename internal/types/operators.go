@@ -60,14 +60,14 @@ func createOpWorker(in <-chan *ContentMsg, opName string, counterFn func(string)
 	out := make(chan interface{})
 	go func() {
 		for msg := range in {
-			out <- CountMsg{msg.FileName, OperatorCount{opName, counterFn(msg.FileContent)}}
+			out <- &CountMsg{msg.FileName, OperatorCount{opName, counterFn(msg.FileContent)}}
 		}
 		close(out)
 	}()
 	return out
 }
 
-func CreateOperators(path string, dist string) Operators {
+func CreateOperators(path string, dist string) *Operators {
 	data, err := ioutil.ReadFile(filepath.Join(config.OPERATORS_PATH, path))
 	util.CheckError(err)
 
@@ -76,7 +76,7 @@ func CreateOperators(path string, dist string) Operators {
 	err = json.Unmarshal(data, &ops.operatorsList)
 	util.CheckError(err)
 
-	return ops
+	return &ops
 }
 
 // (?<!\w) - negative look-behind to make sure the operator name isn't preceded by any character beside its own name

@@ -27,37 +27,34 @@ var (
 		`(["'`+"`"+`])(?:(?=(\\?))\2.)*?\1`, 0)
 )
 
-func SetupOpsPipeline( /* archInfosMap map[string]string, */
-	allowedExtensions map[string]struct{}, operators types.Operators,
+func SetupOpsPipeline(allowedExtensions map[string]struct{}, operators *types.Operators,
 	result *orderedmap.OrderedMap) <-chan *orderedmap.OrderedMap {
 	// create workers from the list of operators
 	inOps, outOps := operators.CreateWorkerOps()
 
 	out := processArchives(operators.Dist)
 
-	var outChannels []<-chan interface{}
-	for i := 0; i < config.PROCESSING_WORKERS; i++ {
-		outChannels = append(outChannels, processArchive(out, allowedExtensions, operators.Dist))
+	var i int
+	outChannels := make([]<-chan interface{}, config.PROCESSING_WORKERS)
+	for i = 0; i < config.PROCESSING_WORKERS; i++ {
+		outChannels[i] = processArchive(out, allowedExtensions, operators.Dist)
 	}
 	out = util.MergeChannels(outChannels...)
 
-	outChannels = nil
-	for i := 0; i < config.PROCESSING_WORKERS; i++ {
-		outChannels = append(outChannels, removeComments(out))
+	for i = 0; i < config.PROCESSING_WORKERS; i++ {
+		outChannels[i] = removeComments(out)
 	}
 	out = util.MergeChannels(outChannels...)
 
-	outChannels = nil
-	for i := 0; i < config.PROCESSING_WORKERS; i++ {
-		outChannels = append(outChannels, removeStrings(out))
+	for i = 0; i < config.PROCESSING_WORKERS; i++ {
+		outChannels[i] = removeStrings(out)
 	}
 	out = util.MergeChannels(outChannels...)
 
 	// (?i) case insensitive
 	reg := regexp.MustCompile("(?i)" + operators.Dist)
-	outChannels = nil
-	for i := 0; i < config.PROCESSING_WORKERS; i++ {
-		outChannels = append(outChannels, checkImport(out, reg))
+	for i = 0; i < config.PROCESSING_WORKERS; i++ {
+		outChannels[i] = checkImport(out, reg)
 	}
 	out = util.MergeChannels(outChannels...)
 
@@ -115,10 +112,12 @@ func processArchive(in <-chan interface{},
 							log.Printf("Repository:%s, File:%s\n", entry.Name(), hdr.Name)
 							log.Fatal(err)
 						}
-						fileContent := string(bs)
+
 						//uncomment it to check files' content
+						//fileContent := string(bs)
 						//log.Println(fileContent)
-						out <- &types.ContentMsg{FileName: entry.Name(), FileContent: fileContent}
+						//out <- &types.ContentMsg{FileName: entry.Name(), FileContent: fileContent}
+						out <- &types.ContentMsg{FileName: entry.Name(), FileContent: string(bs)}
 					}
 				}
 			}
@@ -195,7 +194,7 @@ func gatherResults(outOps <-chan interface{},
 	out := make(chan *orderedmap.OrderedMap)
 	go func() {
 		for msg := range outOps {
-			countMsg := msg.(types.CountMsg)
+			countMsg := msg.(*types.CountMsg)
 			v, _ := result.Get(countMsg.FileName)
 			mapEntry := v.(*orderedmap.OrderedMap)
 			v, _ = mapEntry.Get(countMsg.OperatorCount.Operator)

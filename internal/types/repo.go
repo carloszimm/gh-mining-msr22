@@ -9,3 +9,13 @@ type Info struct {
 	FileSize           int    `json:"fileSize"`
 	ArchiveUrl         string `json:"url"`
 }
+
+type InfoFile struct {
+	Owner              string `json:"-"`
+	RepositoryName     string `json:"-"`
+	RepositoryFullName string `json:"-"`
+	Branch             string `json:"-"`
+	FileName           string `json:"fileName"`
+	FileSize           int    `json:"-"`
+	ArchiveUrl         string `json:"-"`
+}
