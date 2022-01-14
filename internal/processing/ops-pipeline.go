@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strings"
 
 	"github.com/carloszimm/github-mining/internal/config"
 	"github.com/carloszimm/github-mining/internal/types"
@@ -20,15 +19,18 @@ import (
 	"github.com/iancoleman/orderedmap"
 )
 
-var (
-	commentsReg = regexp2.MustCompile(
-		`((?:(?:^[ \t]*)?(?:/\*[^*]*\*+(?:[^/*][^*]*\*+)*/(?:[ \t]*\r?\n(?=[ \t]*(?:\r?\n|/\*|//)))?|//(?:[^\\]|\\(?:\r?\n)?)*?(?:\r?\n(?=[ \t]*(?:\r?\n|/\*|//))|(?=\r?\n))))+)|("[^"\\]*(?:\\[\S\s][^"\\]*)*"|'[^'\\]*(?:\\[\S\s][^'\\]*)*'|(?:\r?\n|[\S\s])[^/"'\\\s]*)`, 0)
-	stringsReg = regexp2.MustCompile(
-		`(["'`+"`"+`])(?:(?=(\\?))\2.)*?\1`, 0)
+// comment pattern acquired from:
+// https://stackoverflow.com/questions/36725194/golang-regex-replace-excluding-quoted-strings
+
+const (
+	commentsPattern = `((?:(?:^[ \t]*)?(?:/\*[^*]*\*+(?:[^/*][^*]*\*+)*/(?:[ \t]*\r?\n(?=[ \t]*(?:\r?\n|/\*|//)))?|//(?:[^\\]|\\(?:\r?\n)?)*?(?:\r?\n(?=[ \t]*(?:\r?\n|/\*|//))|(?=\r?\n))))+)|("[^"\\]*(?:\\[\S\s][^"\\]*)*"|'[^'\\]*(?:\\[\S\s][^'\\]*)*'|(?:\r?\n|[\S\s])[^/"'\\\s]*)`
+	stringsPattern  = `(["'` + "`" + `])(?:(?=(\\?))\2.)*?\1`
 )
 
+var stringsReg = regexp2.MustCompile(stringsPattern, 0)
+
 func SetupOpsPipeline(allowedExtensions map[string]struct{}, operators *types.Operators,
-	result *orderedmap.OrderedMap) <-chan *orderedmap.OrderedMap {
+	regDist *regexp.Regexp, result *orderedmap.OrderedMap) <-chan int {
 	// create workers from the list of operators
 	inOps, outOps := operators.CreateWorkerOps()
 
@@ -41,20 +43,22 @@ func SetupOpsPipeline(allowedExtensions map[string]struct{}, operators *types.Op
 	}
 	out = util.MergeChannels(outChannels...)
 
+	// pass a different regex for each goroutine to avoid possible contention
+	// given the complexity of the regular expression
 	for i = 0; i < config.PROCESSING_WORKERS; i++ {
-		outChannels[i] = removeComments(out)
+		outChannels[i] = removeComments(out, regexp2.MustCompile(commentsPattern, 0))
+	}
+	out = util.MergeChannels(outChannels...)
+
+	// check imports before removing strings to avoid not matching
+	// string paths of the imports (JS)
+	for i = 0; i < config.PROCESSING_WORKERS; i++ {
+		outChannels[i] = checkImport(out, regDist)
 	}
 	out = util.MergeChannels(outChannels...)
 
 	for i = 0; i < config.PROCESSING_WORKERS; i++ {
 		outChannels[i] = removeStrings(out)
-	}
-	out = util.MergeChannels(outChannels...)
-
-	// (?i) case insensitive
-	reg := regexp.MustCompile("(?i)" + operators.Dist)
-	for i = 0; i < config.PROCESSING_WORKERS; i++ {
-		outChannels[i] = checkImport(out, reg)
 	}
 	out = util.MergeChannels(outChannels...)
 
@@ -105,7 +109,7 @@ func processArchive(in <-chan interface{},
 				if hdr.Typeflag == tar.TypeReg {
 					// check if it is in the list of allowed extensions before reading its content
 					if _, ok := allowedExtensions[filepath.Ext(hdr.Name)]; ok {
-						//uncomment to see info about the file being processed
+						//uncomment it to see info about the file being processed
 						//log.Printf("Processing file %s from %s\n", hdr.Name, entry.Name())
 						bs, err := ioutil.ReadAll(tr)
 						if err != nil { // check for errors
@@ -113,11 +117,9 @@ func processArchive(in <-chan interface{},
 							log.Fatal(err)
 						}
 
-						//uncomment it to check files' content
-						//fileContent := string(bs)
-						//log.Println(fileContent)
-						//out <- &types.ContentMsg{FileName: entry.Name(), FileContent: fileContent}
-						out <- &types.ContentMsg{FileName: entry.Name(), FileContent: string(bs)}
+						//uncomment it to check file's content
+						//log.Println(string(bs))
+						out <- types.ContentMsg{FileName: entry.Name(), FileContent: string(bs)}
 					}
 				}
 			}
@@ -128,15 +130,13 @@ func processArchive(in <-chan interface{},
 	return out
 }
 
-func removeComments(in <-chan interface{}) <-chan interface{} {
+func removeComments(in <-chan interface{}, commentsReg *regexp2.Regexp) <-chan interface{} {
 	out := make(chan interface{})
 	go func() {
 		for msg := range in {
-			t := msg.(*types.ContentMsg)
-			// loops through the matches, replacing them by space
-			for _, result := range util.Regexp2FindAllString(commentsReg, t.FileContent) {
-				t.FileContent = strings.Replace(t.FileContent, result[1].String(), " ", 1)
-			}
+			t := msg.(types.ContentMsg)
+			// replace comments by space(s)
+			t.FileContent, _ = commentsReg.Replace(t.FileContent, "$2 ", -1, -1)
 			out <- t
 		}
 		close(out)
@@ -148,12 +148,9 @@ func removeStrings(in <-chan interface{}) <-chan interface{} {
 	out := make(chan interface{})
 	go func() {
 		for msg := range in {
-			t := msg.(*types.ContentMsg)
-			results := util.Regexp2FindAllString(stringsReg, t.FileContent)
-			// loops through the matches, replacing them by empty string
-			for _, result := range results {
-				t.FileContent = strings.Replace(t.FileContent, result[0].String(), "", 1)
-			}
+			t := msg.(types.ContentMsg)
+			// replace strings by empty string
+			t.FileContent, _ = stringsReg.Replace(t.FileContent, "", -1, -1)
 			out <- t
 		}
 		close(out)
@@ -165,7 +162,7 @@ func checkImport(in <-chan interface{}, reg *regexp.Regexp) <-chan interface{} {
 	out := make(chan interface{})
 	go func() {
 		for msg := range in {
-			t := msg.(*types.ContentMsg)
+			t := msg.(types.ContentMsg)
 			if reg.MatchString(t.FileContent) {
 				out <- t
 			}
@@ -176,10 +173,10 @@ func checkImport(in <-chan interface{}, reg *regexp.Regexp) <-chan interface{} {
 }
 
 // broadcast to operator counters(workers)
-func dispatchToOpsCounters(in <-chan interface{}, inOps []chan *types.ContentMsg) {
+func dispatchToOpsCounters(in <-chan interface{}, inOps []chan types.ContentMsg) {
 	go func() {
 		for msg := range in {
-			t := msg.(*types.ContentMsg)
+			t := msg.(types.ContentMsg)
 			for _, inOp := range inOps {
 				inOp <- t
 			}
@@ -189,29 +186,29 @@ func dispatchToOpsCounters(in <-chan interface{}, inOps []chan *types.ContentMsg
 	}()
 }
 
-func gatherResults(outOps <-chan interface{},
-	result *orderedmap.OrderedMap) <-chan *orderedmap.OrderedMap {
-	out := make(chan *orderedmap.OrderedMap)
+func gatherResults(outOps <-chan interface{}, result *orderedmap.OrderedMap) <-chan int {
+	out := make(chan int)
 	go func() {
+		countFiles := 0
 		for msg := range outOps {
-			countMsg := msg.(*types.CountMsg)
+			countMsg := msg.(types.CountMsg)
 			v, _ := result.Get(countMsg.FileName)
 			mapEntry := v.(*orderedmap.OrderedMap)
 			v, _ = mapEntry.Get(countMsg.OperatorCount.Operator)
 			count := v.(int)
 			mapEntry.Set(countMsg.OperatorCount.Operator,
 				count+countMsg.OperatorCount.Total)
+			countFiles++
 		}
-		log.Println("General processing finished!")
 		// sort results
 		result.SortKeys(sort.Strings)
-		// sort each entry by operators' names
+		// sort each entry by operators' name
 		for _, k := range result.Keys() {
 			v, _ := result.Get(k)
 			entry := v.(*orderedmap.OrderedMap)
 			entry.SortKeys(sort.Strings)
 		}
-		out <- result
+		out <- countFiles
 		close(out)
 	}()
 	return out

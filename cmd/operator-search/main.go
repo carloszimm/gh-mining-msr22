@@ -2,24 +2,19 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/carloszimm/github-mining/internal/config"
 	"github.com/carloszimm/github-mining/internal/processing"
 	"github.com/carloszimm/github-mining/internal/types"
 	"github.com/carloszimm/github-mining/internal/util"
-	"github.com/golang-module/carbon/v2"
 	"github.com/iancoleman/orderedmap"
 )
-
-var ALLOWED_EXTENSIONS = map[string][]string{
-	"RxJava":  {"Java"},
-	"RxJS":    {"JavaScript", "CoffeeScript", "TypeScript", "JSX"},
-	"RxSwift": {"Swift"},
-}
 
 type LangExtension struct {
 	Name         string   `json:"name"`
@@ -38,34 +33,38 @@ func init() {
 	util.CheckError(err)
 }
 
-func main() {
-	cfg := config.GetConfigInstance()
-	log.Printf("Starting searching for %s at %s\n", cfg.Distribution, carbon.Now().ToDayDateTimeString())
-
-	allowedExtensions := ALLOWED_EXTENSIONS[cfg.Distribution]
-
-	// loads the extensions related to the analyzed distribution
+func loadExtensions(cfg *config.Config) map[string]struct{} {
 	extensions := make(map[string]struct{})
-	for _, allowedExt := range allowedExtensions {
+	for _, fileExt := range cfg.FileExtensions {
 		for _, exts := range languageExtensions {
-			if allowedExt == exts.Name {
+			if fileExt == exts.Name {
 				for _, ext := range exts.Extensions {
 					extensions[ext] = struct{}{}
 				}
 			}
 		}
 	}
-	// loads operators
+	return extensions
+}
+
+func loadOperators(cfg *config.Config) (*types.Operators, *regexp.Regexp) {
 	opDir, err := os.ReadDir(config.OPERATORS_PATH)
 	util.CheckError(err)
 
 	var operators *types.Operators
+	// (?i) case insensitive
+	reg := regexp.MustCompile("(?i)" + cfg.Distribution)
 	for _, d := range opDir {
-		if !d.IsDir() && strings.Contains(strings.ToLower(d.Name()), strings.ToLower(cfg.Distribution)) {
+		if !d.IsDir() && reg.MatchString(d.Name()) {
 			operators = types.CreateOperators(d.Name(), cfg.Distribution)
+			break
 		}
 	}
 
+	return operators, reg
+}
+
+func createResultMap(cfg *config.Config, operatorsList []string) *orderedmap.OrderedMap {
 	// loads info about the files in archives(repositories)
 	dat, err := os.ReadFile(filepath.Join(config.REPO_RETRIVAL_PATH, cfg.Distribution, "list_of_files.json"))
 	util.CheckError(err)
@@ -77,21 +76,43 @@ func main() {
 	result := orderedmap.New()
 	// initializes result
 	for _, val := range archivesInfos {
+		if cfg.Distribution == "RxJS" && val.FileName == "zwacky-game-music-player-v1-38-g3171b55.tar.gz" {
+			continue
+		}
 		result.Set(val.FileName, orderedmap.New())
-		for _, op := range operators.GetOperators() {
-			v, _ := result.Get(val.FileName)
-			entry := v.(*orderedmap.OrderedMap)
+		v, _ := result.Get(val.FileName)
+		entry := v.(*orderedmap.OrderedMap)
+		for _, op := range operatorsList {
 			entry.Set(op, 0)
 		}
 	}
 
-	resultChannel := processing.SetupOpsPipeline(extensions, operators, result)
+	return result
+}
 
-	result = <-resultChannel
+func main() {
+	cfg := config.GetConfigInstance()
+	log.Printf("Starting searching for %s operators", cfg.Distribution)
 
-	log.Printf("Search for operators finished at: %s\n", carbon.Now().ToDayDateTimeString())
-	log.Println("Writing Results...")
+	// loads the extensions related to the analyzed distribution
+	extensions := loadExtensions(cfg)
+
+	// loads operators
+	operators, regDist := loadOperators(cfg)
+
+	// initializes result
+	result := createResultMap(cfg, operators.GetOperators())
+
+	resultChannel := processing.SetupOpsPipeline(extensions, operators, regDist, result)
+
+	countFiles := <-resultChannel
+
+	log.Println("Search for operators finished!")
+	log.Printf("Number of processed files: %d. Writing Results...\n", countFiles)
 	util.WriteFolder(config.OPERATORS_SEARCH_PATH)
-	util.WriteJSON(filepath.Join(config.OPERATORS_SEARCH_PATH, strings.ToLower(cfg.Distribution)), result)
+	fileName := fmt.Sprintf("%s_%s", strings.ToLower(cfg.Distribution), strings.Join(cfg.FileExtensions, "-"))
+	util.WriteJSON(
+		filepath.Join(config.OPERATORS_SEARCH_PATH, fileName),
+		result)
 	log.Println("Done!")
 }

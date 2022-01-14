@@ -1,6 +1,7 @@
 {
     "tokens": [],
-    "distribution": "rxjava",
-    "min_stars": 15,
-    "increase_factor": 50
+    "distribution": "RxJS",
+    "min_stars": 10,
+    "increase_factor": 50,
+    "file_extensions": ["JSX", "JavaScript", "TypeScript"]
 }

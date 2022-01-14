@@ -23,6 +23,7 @@ type Config struct {
 	Distribution   string   `json:"distribution" validate:"required"`
 	MinStars       int      `json:"min_stars" validate:"required"`
 	IncreaseFactor int      `json:"increase_factor" validate:"required"`
+	FileExtensions []string `json:"file_extensions"`
 }
 
 var instance *Config

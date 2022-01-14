@@ -38,14 +38,14 @@ func (ops *Operators) GetOperators() []string {
 	return ops.operatorsList
 }
 
-func (ops *Operators) CreateWorkerOps() ([]chan *ContentMsg, <-chan interface{}) {
-	inChannels := make([]chan *ContentMsg, len(ops.operatorsList))
+func (ops *Operators) CreateWorkerOps() ([]chan ContentMsg, <-chan interface{}) {
+	inChannels := make([]chan ContentMsg, len(ops.operatorsList))
 	outChannels := make([]<-chan interface{}, 0, len(ops.operatorsList)*config.PROCESSING_WORKERS)
 
 	// ranges through the operators list and creates a channel/worker for each operator
 	// stores output channels for futher merging and creation of a single channel
 	for i, op := range ops.operatorsList {
-		inChannel := make(chan *ContentMsg)
+		inChannel := make(chan ContentMsg)
 		inChannels[i] = inChannel
 		counterFn := createCounter(op)
 		for j := 0; j < config.PROCESSING_WORKERS; j++ {
@@ -56,11 +56,12 @@ func (ops *Operators) CreateWorkerOps() ([]chan *ContentMsg, <-chan interface{})
 	return inChannels, util.MergeChannels(outChannels...)
 }
 
-func createOpWorker(in <-chan *ContentMsg, opName string, counterFn func(string) int) <-chan interface{} {
-	out := make(chan interface{})
+func createOpWorker(in <-chan ContentMsg, opName string, counterFn func(string) int) <-chan interface{} {
+	// give it some buffer in case previous pipeline steps run too quickly
+	out := make(chan interface{}, config.PROCESSING_WORKERS)
 	go func() {
 		for msg := range in {
-			out <- &CountMsg{msg.FileName, OperatorCount{opName, counterFn(msg.FileContent)}}
+			out <- CountMsg{msg.FileName, OperatorCount{opName, counterFn(msg.FileContent)}}
 		}
 		close(out)
 	}()
@@ -79,7 +80,8 @@ func CreateOperators(path string, dist string) *Operators {
 	return &ops
 }
 
-// (?<!\w) - negative look-behind to make sure the operator name isn't preceded by any character beside its own name
+// (?<!\w) - negative look-behind to make sure the operator name isn't preceded by any character
+// besides its own name
 // \s* - followed by zero or more spaces
 // { - for swift closures
 func createCounter(opName string) func(string) int {
@@ -89,7 +91,15 @@ func createCounter(opName string) func(string) int {
 	}
 }
 
-func CloseAllInOps(inOps []chan *ContentMsg) {
+/* // alternative with stdlib
+func createCounter(opName string) func(string) int {
+	re := regexp.MustCompile(`\.?\W` + opName + `\s*(\(|{)`)
+	return func(s string) int {
+		return len(re.FindAllStringIndex(s, -1))
+	}
+} */
+
+func CloseAllInOps(inOps []chan ContentMsg) {
 	for _, in := range inOps {
 		close(in)
 	}
