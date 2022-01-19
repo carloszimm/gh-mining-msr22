@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/carloszimm/github-mining/internal/config"
 	"github.com/carloszimm/github-mining/internal/types"
@@ -30,7 +31,7 @@ const (
 var stringsReg = regexp2.MustCompile(stringsPattern, 0)
 
 func SetupOpsPipeline(allowedExtensions map[string]struct{}, operators *types.Operators,
-	regDist *regexp.Regexp, result *orderedmap.OrderedMap) <-chan int {
+	result *orderedmap.OrderedMap) <-chan int {
 	// create workers from the list of operators
 	inOps, outOps := operators.CreateWorkerOps()
 
@@ -52,6 +53,11 @@ func SetupOpsPipeline(allowedExtensions map[string]struct{}, operators *types.Op
 
 	// check imports before removing strings to avoid not matching
 	// string paths of the imports (JS)
+	regDistPattern := "(?i)" + operators.Dist
+	if strings.EqualFold(operators.Dist, "RxJava") {
+		regDistPattern += "|reactivex"
+	}
+	regDist := regexp.MustCompile(regDistPattern)
 	for i = 0; i < config.PROCESSING_WORKERS; i++ {
 		outChannels[i] = checkImport(out, regDist)
 	}

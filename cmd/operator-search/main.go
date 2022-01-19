@@ -47,7 +47,7 @@ func loadExtensions(cfg *config.Config) map[string]struct{} {
 	return extensions
 }
 
-func loadOperators(cfg *config.Config) (*types.Operators, *regexp.Regexp) {
+func loadOperators(cfg *config.Config) *types.Operators {
 	opDir, err := os.ReadDir(config.OPERATORS_PATH)
 	util.CheckError(err)
 
@@ -61,7 +61,7 @@ func loadOperators(cfg *config.Config) (*types.Operators, *regexp.Regexp) {
 		}
 	}
 
-	return operators, reg
+	return operators
 }
 
 func createResultMap(cfg *config.Config, operatorsList []string) *orderedmap.OrderedMap {
@@ -98,12 +98,12 @@ func main() {
 	extensions := loadExtensions(cfg)
 
 	// loads operators
-	operators, regDist := loadOperators(cfg)
+	operators := loadOperators(cfg)
 
 	// initializes result
 	result := createResultMap(cfg, operators.GetOperators())
 
-	resultChannel := processing.SetupOpsPipeline(extensions, operators, regDist, result)
+	resultChannel := processing.SetupOpsPipeline(extensions, operators, result)
 
 	countFiles := <-resultChannel
 
