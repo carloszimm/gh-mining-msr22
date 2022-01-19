@@ -16,9 +16,9 @@ const config = {
             display: true,
             position: "bottom",
             labels: {
-                //fontColor: "black",
+                fontColor: "black",
                 //fontStyle: "bold"
-                fontFamily: "Verdana"
+                fontFamily: "sans-serif"
             }
         },
         title: {
@@ -31,7 +31,7 @@ const config = {
                 color: 'black',
                 font: {
                     weight: 'bold',
-                    family: 'Verdana'
+                    family: 'sans-serif'
                 },
                 formatter: function (value, context) {
                     let total = context.dataset.data[0] + context.dataset.data[1]
@@ -76,6 +76,8 @@ async function processFiles() {
     config.data = data;
     const myChart = new ChartJsImage();
     myChart.setConfig(config);
+    myChart.setHeight(400);
+    myChart.setWidth(600);
 
     myChart.toFile(`${UTILIZATION_PATH}/utilization.png`);
 }

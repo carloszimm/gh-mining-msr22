@@ -7,13 +7,13 @@ const fs = require('fs'),
 
 const operatorsResult = require('./operators-result');
 
-const NUMBER_SAMPLES = 10,
+const NUMBER_SAMPLES = 15,
   RESULT_PATH = "./results",
   FREQUENCY_PATH = RESULT_PATH + "/frequency";
 
 // chart config
 const config = {
-  type: 'bar',
+  type: 'horizontalBar',
   options: {
     legend: { display: false },
     title: {
@@ -22,16 +22,19 @@ const config = {
     scales: {
       xAxes: [{
         ticks: {
-          fontFamily: 'Verdana',
-          fontStyle: 'bold'
+          fontFamily: 'sans-serif',
+          fontStyle: 'bold',
+          beginAtZero: true,
+          precision: 0
         }
       }],
       yAxes: [
         {
           ticks: {
-            fontFamily: 'Verdana',
+            fontFamily: 'sans-serif',
             fontStyle: 'bold',
-            beginAtZero: true
+            beginAtZero: true,
+            fontColor: "black"
           }
         }]
     }
@@ -77,7 +80,16 @@ async function processFiles() {
       })
       config.data = data;
       const myChart = new ChartJsImage();
+      /* let max = yValues[0];
+      if (max == 1){
+        config.options.scales.xAxes[0].ticks.max = (max + 0.2);
+      } else{
+        config.options.scales.xAxes[0].ticks.max = undefined;
+      } */
       myChart.setConfig(config);
+
+      myChart.setHeight(400);
+      myChart.setWidth(600);
 
       myChart.toFile(`${FREQUENCY_PATH}/frequecy_${val}_top${i === 0 ? "MostUsed" : "LeastUsed"}.png`);
     }

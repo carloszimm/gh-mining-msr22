@@ -20,20 +20,20 @@ const config = {
             labels: {
                 fontColor: "black",
                 //fontStyle: "bold"
-                fontFamily: "Verdana"
+                fontFamily: "sans-serif"
             }
         },
         title: {
             display: false,
-        },plugins: {
+        }, plugins: {
             datalabels: {
                 color: 'black',
                 font: {
                     weight: 'bold',
-                    family: 'Verdana'
+                    family: 'sans-serif'
                 },
                 formatter: function (value, context) {
-                    return value > 0 ? (value < 100 ? value.toFixed(1) + '%': value + '%') : "";
+                    return value > 0 ? (value < 100 ? value.toFixed(1) + '%' : value + '%') : "";
                 }
             }
         },
@@ -42,7 +42,7 @@ const config = {
                 stacked: true,
                 ticks: {
                     //fontColor: 'black',
-                    fontFamily: 'Verdana',
+                    fontFamily: 'sans-serif',
                     fontStyle: 'bold'
                 }
             }],
@@ -50,7 +50,7 @@ const config = {
                 stacked: true,
                 ticks: {
                     //fontColor: 'black',
-                    fontFamily: 'Verdana',
+                    fontFamily: 'sans-serif',
                     fontStyle: 'bold',
                     min: 0,
                     max: 100,
@@ -103,6 +103,8 @@ async function processFiles() {
     config.data = data;
     const myChart = new ChartJsImage();
     myChart.setConfig(config);
+    myChart.setHeight(400);
+    myChart.setWidth(600);
 
     myChart.toFile(`${DISTRIBUTION_PATH}/utilization_perDistribution.png`);
 }
