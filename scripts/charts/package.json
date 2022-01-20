@@ -10,7 +10,9 @@
   "license": "ISC",
   "dependencies": {
     "chartjs-to-image": "^1.0.5",
+    "distance-calc": "^0.2.0",
     "fast-csv": "^4.3.6",
+    "sequencematcher": "^1.0.11",
     "uniqolor": "^1.0.1"
   }
 }

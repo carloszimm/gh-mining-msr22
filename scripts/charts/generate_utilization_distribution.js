@@ -1,9 +1,7 @@
 const fs = require('fs'),
     fsPromisses = require('fs/promises'),
     path = require('path'),
-    ChartJsImage = require('chartjs-to-image'),
-    uniqolor = require('uniqolor'),
-    csv = require('fast-csv');
+    ChartJsImage = require('chartjs-to-image');
 
 const operatorsResult = require('./operators-result');
 
@@ -41,20 +39,24 @@ const config = {
             xAxes: [{
                 stacked: true,
                 ticks: {
-                    //fontColor: 'black',
+                    fontColor: 'black',
                     fontFamily: 'sans-serif',
                     fontStyle: 'bold'
-                }
+                },
+                //barThickness: 80,
+                maxBarThickness: 80,
+                /* categoryPercentage: 2.0,
+                barPercentage: 2.0 */
             }],
             yAxes: [{
                 stacked: true,
                 ticks: {
-                    //fontColor: 'black',
+                    fontColor: 'black',
                     fontFamily: 'sans-serif',
                     fontStyle: 'bold',
                     min: 0,
                     max: 100,
-                    stepSize: 20,
+                    stepSize: 50,
                     callback: function (value) {
                         return (value / 100 * 100).toFixed(0) + '%'; // convert it to percentage
                     },
@@ -103,8 +105,8 @@ async function processFiles() {
     config.data = data;
     const myChart = new ChartJsImage();
     myChart.setConfig(config);
-    myChart.setHeight(400);
-    myChart.setWidth(600);
+    myChart.setHeight(200);
+    myChart.setWidth(400);
 
     myChart.toFile(`${DISTRIBUTION_PATH}/utilization_perDistribution.png`);
 }

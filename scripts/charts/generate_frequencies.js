@@ -60,9 +60,12 @@ async function processFiles() {
     // sort entries descendingly
     frequencies = new Map([...frequencies.entries()].sort((a, b) => b[1] - a[1]));
     // get first elements
-    topFrequencies.push(new Map([...frequencies.entries()].slice(0, NUMBER_SAMPLES)));
+    topFrequencies.push(new Map([...frequencies.entries()]
+      .filter(([k, v]) => v > 0).slice(0, NUMBER_SAMPLES)));
     // get last elements
-    topFrequencies.push(new Map([...frequencies.entries()].slice(frequencies.size - NUMBER_SAMPLES)));
+    topFrequencies.push(new Map([...frequencies.entries()]
+      .filter(([k, v]) => v > 0).reverse().slice(0, NUMBER_SAMPLES).reverse()));
+    
     for (let i = 0; i < topFrequencies.length; i++) {
       let data = {
         labels: [],
@@ -93,12 +96,15 @@ async function processFiles() {
 
       myChart.toFile(`${FREQUENCY_PATH}/frequecy_${val}_top${i === 0 ? "MostUsed" : "LeastUsed"}.png`);
     }
+    // writes extracted data to JSON
+    await fsPromisses.writeFile(`${FREQUENCY_PATH}/frequencies_${val}.json`,
+      JSON.stringify(Object.fromEntries(frequencies)));
     // writes extracted data to CSV
     const csvStream = csv.format({ writeBOM: true });
     csvStream
       .pipe(fs.createWriteStream(`${FREQUENCY_PATH}/frequencies_${val}.csv`, { encoding: 'utf8' }))
       .on('finish', () => {
-        console.log("Data written successfully to the CSV file!");
+        console.log("Data written successfully to the CSV and JSON files!");
       });
     // writes headers
     csvStream.write(["Operator", "Frequency"]);
