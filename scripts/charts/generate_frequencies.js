@@ -25,7 +25,8 @@ const config = {
           fontFamily: 'sans-serif',
           fontStyle: 'bold',
           beginAtZero: true,
-          precision: 0
+          precision: 0,
+          fontColor: "black"
         }
       }],
       yAxes: [
@@ -91,8 +92,8 @@ async function processFiles() {
       } */
       myChart.setConfig(config);
 
-      myChart.setHeight(400);
-      myChart.setWidth(600);
+      myChart.setHeight(250);
+      //myChart.setWidth(600);
 
       myChart.toFile(`${FREQUENCY_PATH}/frequecy_${val}_top${i === 0 ? "MostUsed" : "LeastUsed"}.png`);
     }
