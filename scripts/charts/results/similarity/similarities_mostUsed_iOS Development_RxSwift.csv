@@ -1,0 +1,12 @@
+﻿Operator,Frequency
+map,833
+subscribe,733
+create,295
+filter,291
+flatMap,290
+just,167
+from,139
+combineLatest,114
+observeOn,95
+empty,77
+distinctUntilChanged,71

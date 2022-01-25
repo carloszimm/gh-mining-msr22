@@ -1,0 +1,9 @@
+﻿Operator,Frequency
+test,66
+subscribe,65
+create,37
+error,27
+map,23
+flatMap,18
+any,16
+observeOn,13

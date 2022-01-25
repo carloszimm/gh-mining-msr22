@@ -1,0 +1,10 @@
+﻿Operator,Frequency
+map,24
+subscribe,21
+create,19
+filter,16
+flatMap,12
+just,4
+empty,3
+from,3
+startWith,3

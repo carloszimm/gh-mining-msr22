@@ -1,0 +1,12 @@
+﻿Operator,Frequency
+subscribe,159
+map,154
+from,124
+of,82
+switchMap,45
+filter,44
+merge,33
+fromEvent,31
+take,29
+mergeMap,23
+concat,15
