@@ -51,7 +51,6 @@ go run cmd/operator-search/main.go
 ```
 &ensp;:floppy_disk: After execution, the result is available at `assets/operators-search`.
 
----
 **repo-retrieval**
 
 Script to retrieve the repositories to be mined.
@@ -60,7 +59,6 @@ go run cmd/repo-retrieval/main.go
 ```
 &ensp;:floppy_disk: After execution, the result is available at `assets/repo-retrieval`.
 
----
 **repo-search**
 
 Script to search for repositories using selected rx libraries e save that information in a file, so repo-retrieval can proceed.
@@ -69,7 +67,6 @@ go run cmd/repo-search/main.go
 ```
 &ensp;:floppy_disk: After execution, the result is available at `assets/repo-search`.
 
----
 **repo-summary**
 
 Script to create a summary of all rx distribution, including their total of dependent repositories, those with 0 stars and those with >=10 stars.
