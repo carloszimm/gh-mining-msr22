@@ -43,28 +43,36 @@ Before execution of any Go script, one must run the following command in a termi
 go mod tidy
 ```
 
-* **operator-search** - Script to search for the Rx operators.
+**operator-search**
+
+Script to search for the Rx operators.
 ```sh
 go run cmd/operator-search/main.go
 ```
 &ensp;:floppy_disk: After execution, the result is available at `assets/operators-search`.
 
 ---
-* **repo-retrieval** - Script to retrieve the repositories to be mined.
+**repo-retrieval**
+
+Script to retrieve the repositories to be mined.
 ```sh
 go run cmd/repo-retrieval/main.go
 ```
 &ensp;:floppy_disk: After execution, the result is available at `assets/repo-retrieval`.
 
 ---
-* **repo-search** - Script to search for repositories using selected rx libraries e save that information in a file, so repo-retrieval can proceed.
+**repo-search**
+
+Script to search for repositories using selected rx libraries e save that information in a file, so repo-retrieval can proceed.
 ```sh
 go run cmd/repo-search/main.go
 ```
 &ensp;:floppy_disk: After execution, the result is available at `assets/repo-search`.
 
 ---
-* **repo-summary** - Script to create a summary of all rx distribution, including their total of dependent repositories, those with 0 stars and those with >=10 stars.
+**repo-summary**
+
+Script to create a summary of all rx distribution, including their total of dependent repositories, those with 0 stars and those with >=10 stars.
 ```sh
 go run cmd/repo-summary/main.go
 ```
@@ -80,7 +88,8 @@ npm install
 ```
 All the Node scripts should use `/scripts/charts` as the working directory.
 
-* **generate-similarity** - Script to generate charts and data related to RQ3.
+##### generate-similarity
+Script to generate charts and data related to RQ3.
 ```sh
 node generate-similarity
 ```
@@ -95,7 +104,8 @@ The script produces many outputs and they can be generalized as:
 Where, _[relevant topic]_ = {Dependency Management, Introductory Questions, iOS Development} and _[rx library]_ = {RxJava, RxJS, RxSwift}
 
 ---
-* **generate_frequencies** - Script to generate charts and data related to the frequencies presented in RQ1.
+##### generate_frequencies
+Script to generate charts and data related to the frequencies presented in RQ1.
 ```sh
 node generate_frequencies
 ```
@@ -107,14 +117,16 @@ The script produces many outputs and they can be summarized as:
 Where, _[rx library]_ = {RxJava, RxJS, RxSwift}
 
 ---
-* **generate_utilization** - Script to generate a chart showing the percentage of utilization when combine all frequencies from operators of the three studied libraries (not present in the paper only the percentage).
+##### generate_utilization
+Script to generate a chart showing the percentage of utilization when combine all frequencies from operators of the three studied libraries (not present in the paper only the percentage).
 ```sh
 node generate_utilization
 ```
 &ensp;:floppy_disk: By the end of execution, the result is placed in `/scripts/charts/results/utilization`
 
 ---
-* **generate_utilization_distribution** - Script to generate a chart showing the percentage of utilization of the operators in each Rx library: RxJava, RxJS, and RxSwift.
+##### generate_utilization_distribution
+Script to generate a chart showing the percentage of utilization of the operators in each Rx library: RxJava, RxJS, and RxSwift.
 ```sh
 node generate_utilization_distribution
 ```
