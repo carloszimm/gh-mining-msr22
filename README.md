@@ -19,7 +19,7 @@ The file `Programming_Languages_Extensions.json` contains a list extensions used
 * JSX, JavaScript, and TypeScript (for RxJS)
 * Swift (for RxSwift)
 
-As detailed in the paper, the `repo-retrieval` result do not provides the actual GitHub repositories given the size constraints to upload them here (even if they are compressed as tarball files). Instead, under each rx library folder inside `repo-retrieval` (e.g., `/assets/repo-retrieval/rxjava`), there is a file called `list_of_files.json` containing an array of objects with the following info that can be used to download the exactly same files (that must me place in a subfolder `/archives` relative to `list_of_files.json`):
+As detailed in the paper, the `repo-retrieval` result does not provide the actual GitHub repositories given the size constraints to upload them here (even if they are compressed as tarball files). Instead, under each rx library folder inside `repo-retrieval` (e.g., `/assets/repo-retrieval/rxjava`), there is a file called `list_of_files.json` containing an array of objects with the following info that can be used to download the exactly same files (that must me place in a subfolder `/archives` relative to `list_of_files.json`):
 | Entry   | Description         |
 | :------------- |:-------------|
 | owner | the owner of the repository |
