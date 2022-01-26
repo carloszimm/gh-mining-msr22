@@ -14,7 +14,7 @@ Under the folders in `/assets`, data either genereated by or collected for the s
 | result-summary | Contains a summary of all rx distribution, including their total of dependent repositories, those with 0 stars and those with >=10 stars  |
 | so-data | Stack Overflow data colleted through the Stack Mining scripts |
 
-The file `Programming_Languages_Extensions.json` contains a list extensions used by several languages. In the paper, the following entries were utilized:
+The file `Programming_Languages_Extensions.json` contains a list of extensions used by several languages. In the paper, the following entries were utilized:
 * Java (for RxJava)
 * JSX, JavaScript, and TypeScript (for RxJS)
 * Swift (for RxSwift)
