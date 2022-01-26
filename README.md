@@ -24,7 +24,7 @@ As detailed in the paper, the `repo-retrieval` result do not provides the actual
 | :------------- |:-------------|
 | owner | the owner of the repository |
 | repoName | the repository name |
-| repoFullName | the full repository name (i.e., with the ownwer concatenated) |
+| repoFullName | the full repository name (i.e., with the _owner\_name/_ as a prefix) |
 | branch | the default branch |
 | fileName | the name of the tarball file |
 | fileSize | the files' size in bytes |
@@ -32,9 +32,9 @@ As detailed in the paper, the `repo-retrieval` result do not provides the actual
 
 ## Execution
 ### Requirements
-Most of the scripts utilizes Golang (mainly) and Nodejs and they have be executed the following versions:
-* Go (tested with v1.17.5)
-* Node.js (tested with v14.17.5)
+Most of the scripts utilize Golang (mainly) and Nodejs and they have be executed the following versions:
+* Go v1.17.5
+* Node.js v14.17.5
 
 ### Scripts
 The Go scripts are available under the `/cmd` folder. All of them are structured to be executed at the root of the repository.
@@ -74,6 +74,23 @@ Script to create a summary of all rx distribution, including their total of depe
 go run cmd/repo-summary/main.go
 ```
 &ensp;:floppy_disk: After execution, the result is available at `assets/repo-search`.
+
+#### Configuration
+The majority of the Go scripts depend on entries in a JSON object located in `/configs/config.json`. This object has the following structure(this is the object present by default in config.json):
+```yaml
+{
+    "tokens": [],
+    "distribution": "RxJS",
+    "min_stars": 10,
+    "increase_factor": 50,
+    "file_extensions": ["JSX", "JavaScript", "TypeScript"]
+}
+```
+Where:
+* **tokens(array of strings)**: GitHub tokens used mainly in scripts involving GitHub queries. Those tokens are exploited to create workers, so the queries can be executed more quickly. During the paper's executions, we leveraged three GitHub tokens/workers;
+* **distribution(string)**: the distribution (rx library) to be considered in the current execution of some scripts;
+* **min_stars(integer)**: the minimum number of stars to be used in the search for Rx-dependent repositories;
+* **increase_factor(integer)**: used to control the factor by which the star intervals are contructed until reaching the limit (found by issuing a previous query where the number of stars is descendingly sorted). It is also used in the search for Rx-dependent repositories.
 
 #### Nodejs scripts
 
