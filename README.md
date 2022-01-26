@@ -90,7 +90,8 @@ Where:
 * **tokens(array of strings)**: GitHub tokens used mainly in scripts involving GitHub queries. Those tokens are exploited to create workers, so the queries can be executed more quickly. During the paper's executions, we leveraged three GitHub tokens/workers;
 * **distribution(string)**: the distribution (rx library) to be considered in the current execution of some scripts;
 * **min_stars(integer)**: the minimum number of stars to be used in the search for Rx-dependent repositories;
-* **increase_factor(integer)**: used to control the factor by which the star intervals are contructed until reaching the limit (found by issuing a previous query where the number of stars is descendingly sorted). It is also used in the search for Rx-dependent repositories.
+* **increase_factor(integer)**: used to control the factor by which the star intervals are contructed until reaching the limit (found by issuing a previous query where the number of stars is descendingly sorted). It is also used in the search for Rx-dependent repositories;
+*  **file_extensions(array of strings)**: lists the entries of `Programming_Languages_Extensions.json` file that should be considered in repo-retrieval script. The [Data](#data) section describes the entries leveraged in the paper.
 
 #### Nodejs scripts
 
