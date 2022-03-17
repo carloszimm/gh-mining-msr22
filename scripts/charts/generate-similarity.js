@@ -2,7 +2,7 @@ const frequenciesPath = "./results/frequency/",
     postTopicsPath = "../../assets/so-data/posts-topic/",
     postsOperatorSearchPath = "../../assets/so-data/operators-search/",
     topics = [5, 19, 22],
-    xValues = ["Introductory Questions", "iOS or Mobile", "Dependency Management"];
+    xValues = ["Introductory Questions", "iOS Development", "Dependency Management"];
 
 const RESULT_PATH = "./results",
     SIMILARITY_PATH = RESULT_PATH + "/similarity/",
