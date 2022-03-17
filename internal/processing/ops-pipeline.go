@@ -3,6 +3,7 @@ package processing
 import (
 	"archive/tar"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -19,6 +20,8 @@ import (
 	"github.com/dlclark/regexp2"
 	"github.com/iancoleman/orderedmap"
 )
+
+var CheckJavaCollectionLike bool
 
 // comment pattern acquired from:
 // https://stackoverflow.com/questions/36725194/golang-regex-replace-excluding-quoted-strings
@@ -125,7 +128,8 @@ func processArchive(in <-chan interface{},
 
 						//uncomment it to check file's content
 						//log.Println(string(bs))
-						out <- types.ContentMsg{FileName: entry.Name(), FileContent: string(bs)}
+						out <- types.ContentMsg{FileName: entry.Name(),
+							InnerFileName: hdr.Name, FileContent: string(bs)}
 					}
 				}
 			}
@@ -166,11 +170,25 @@ func removeStrings(in <-chan interface{}) <-chan interface{} {
 
 func checkImport(in <-chan interface{}, reg *regexp.Regexp) <-chan interface{} {
 	out := make(chan interface{})
+	counts := []int{}
 	go func() {
 		for msg := range in {
 			t := msg.(types.ContentMsg)
 			if reg.MatchString(t.FileContent) {
+				if CheckJavaCollectionLike {
+					for i, inspectedLib := range InspectedLibs {
+						if inspectedLib.Regex.MatchString(t.FileContent) {
+							fmt.Println(t.InnerFileName)
+							counts[i]++
+						}
+					}
+				}
 				out <- t
+			}
+		}
+		if CheckJavaCollectionLike {
+			for i, inspectedLib := range InspectedLibs {
+				fmt.Printf("%s File Count: %d\n", inspectedLib.Name, counts[i])
 			}
 		}
 		close(out)
@@ -205,7 +223,23 @@ func gatherResults(outOps <-chan interface{}, result *orderedmap.OrderedMap) <-c
 			mapEntry.Set(countMsg.OperatorCount.Operator,
 				count+countMsg.OperatorCount.Total)
 			countFiles++
+			if CheckJavaCollectionLike {
+				// accumulates total of operators occurrences in files w/ collection-like libs' imports
+				// used for checking of Java collection-like libs
+				if elem, ok := FilesMap[countMsg.InnerFileName]; ok {
+					if countMsg.OperatorCount.Total > 0 {
+						elem.Set(countMsg.OperatorCount.Operator, countMsg.OperatorCount.Total)
+					}
+				}
+			}
 		}
+
+		if CheckJavaCollectionLike {
+			// saves ops' count from files w/ collection-like libs' imports in a pretty JSON file
+			// used to facilitate the looking for false positives in those files
+			util.WritePrettyJSON(filepath.Join("assets", "collection-like_count"), FilesMap)
+		}
+
 		// sort results
 		result.SortKeys(sort.Strings)
 		// sort each entry by operators' name

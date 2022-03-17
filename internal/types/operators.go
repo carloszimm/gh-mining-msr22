@@ -11,15 +11,17 @@ import (
 	"github.com/dlclark/regexp2"
 )
 
-// type to store the repo name and the file content to be processed
+// type to store the repo name(FileName) and the file content to be processed
 type ContentMsg struct {
-	FileName    string
-	FileContent string
+	FileName      string
+	InnerFileName string
+	FileContent   string
 }
 
-// type to store the repo name and some operator counting
+// type to store the repo name(FileName) and some operator counting
 type CountMsg struct {
-	FileName string
+	FileName      string
+	InnerFileName string
 	OperatorCount
 }
 
@@ -61,7 +63,8 @@ func createOpWorker(in <-chan ContentMsg, opName string, counterFn func(string) 
 	out := make(chan interface{}, config.PROCESSING_WORKERS)
 	go func() {
 		for msg := range in {
-			out <- CountMsg{msg.FileName, OperatorCount{opName, counterFn(msg.FileContent)}}
+			out <- CountMsg{msg.FileName, msg.InnerFileName,
+				OperatorCount{opName, counterFn(msg.FileContent)}}
 		}
 		close(out)
 	}()

@@ -1,0 +1,164 @@
+{
+	"MyCATApache-Mycat2-1f02937/executor/src/main/java/io/ordinate/engine/factory/ComplierContext.java": {
+		"collect": 1,
+		"map": 1,
+		"toList": 1
+	},
+	"MyCATApache-Mycat2-1f02937/hbt/src/main/java/io/mycat/calcite/StreamMycatEnumerableRelImplementor.java": {
+		"concat": 1
+	},
+	"ThePepeYT-databasehelper-1e3675d/src/main/java/com/thepepeyt/databasehelper/Utils/ObservableType.java": {
+		"fromIterable": 1,
+		"isEmpty": 1
+	},
+	"ThePepeYT-databasehelper-1e3675d/src/main/java/com/thepepeyt/databasehelper/database/Objects/row/checkData.java": {
+		"isEmpty": 1,
+		"map": 1,
+		"collect": 1,
+		"blockingSingle": 1,
+		"toList": 2,
+		"complete": 1,
+		"subscribe": 4
+	},
+	"akarnokd-RxJavaJdk8Interop-ea8510a/src/main/java/hu/akarnokd/rxjava3/jdk8interop/ObservableInterop.java": {
+		"map": 1,
+		"fromFuture": 1,
+		"fromOptional": 1,
+		"fromStream": 2,
+		"mapOptional": 1,
+		"last": 1,
+		"lastElement": 1,
+		"lastOrError": 1,
+		"blockingFirst": 1,
+		"blockingIterable": 1,
+		"blockingLast": 1,
+		"collect": 1,
+		"concatMap": 1,
+		"create": 1,
+		"first": 1,
+		"firstElement": 1,
+		"firstOrError": 1,
+		"flatMapStream": 1,
+		"single": 1,
+		"singleOrError": 1,
+		"subscribe": 3
+	},
+	"alex-shpak-rx-jersey-0d86ff1/rxjava2-server/src/test/java/InterceptorsTest.java": {
+		"just": 3,
+		"to": 1,
+		"complete": 4,
+		"error": 2,
+		"flatMapCompletable": 1,
+		"forEach": 1
+	},
+	"manusa-yakc-c1a7a12/kubernetes-client-api/src/main/java/com/marcnuri/yakc/api/KubernetesListCall.java": {},
+	"mesosphere-mesos-rxjava-026afeb/mesos-rxjava-test/src/test/java/com/mesosphere/mesos/rx/java/test/simulation/MesosServerSimulationScenariosTest.java": {
+		"collect": 3,
+		"contains": 2,
+		"create": 6,
+		"first": 2,
+		"flatMap": 3,
+		"just": 2,
+		"last": 1,
+		"map": 9,
+		"toList": 3,
+		"subscribe": 4,
+		"onBackpressureBuffer": 1
+	},
+	"nurkiewicz-rxjava-workshop-e93f116/src/test/java/com/nurkiewicz/rxjava/demo/Main.java": {
+		"take": 1,
+		"forEach": 1,
+		"merge": 4,
+		"range": 1
+	},
+	"politrons-reactive-d024d54/src/test/java/ReactiveMonadsCombinations.java": {
+		"buffer": 1,
+		"filter": 5,
+		"flatMap": 9,
+		"forEach": 2,
+		"fromPublisher": 2,
+		"just": 9,
+		"map": 23,
+		"subscribe": 6,
+		"take": 2,
+		"timeout": 2
+	},
+	"vert-x3-vertx-rx-db51e4d/rx-java/src/main/java/examples/RxifiedExamples.java": {
+		"lift": 3,
+		"map": 1,
+		"subscribe": 24,
+		"flatMap": 7,
+		"forEach": 4,
+		"timer": 1,
+		"toObservable": 22,
+		"buffer": 1,
+		"collect": 1,
+		"interval": 2,
+		"single": 1
+	},
+	"vert-x3-vertx-rx-db51e4d/rx-java2-gen/src/main/java/io/vertx/lang/reactivex/RxJava2Generator.java": {
+		"create": 8,
+		"map": 1,
+		"collect": 1
+	},
+	"vert-x3-vertx-rx-db51e4d/rx-java3/src/test/java/io/vertx/reactivex/sqlclient/SqlClientTest.java": {
+		"blockingGet": 1,
+		"map": 1,
+		"collect": 2,
+		"flatMap": 2,
+		"flatMapPublisher": 1,
+		"subscribe": 1,
+		"toMaybe": 1,
+		"toFlowable": 1,
+		"toList": 1
+	},
+	"zhangjessey-rxweb-348139c/src/main/java/rxweb/engine/server/netty/Dispatcher.java": {
+		"collect": 1,
+		"isEmpty": 1,
+		"concat": 1,
+		"map": 4,
+		"flatMap": 1,
+		"defer": 1,
+		"reduce": 1,
+		"toList": 1
+	},
+	"zouzhberk-rxjava-study-ebbf0ce/src/main/java/com/github/zouzhberk/study/rxjava2/RxAsynDemo.java": {
+		"blockingIterable": 2,
+		"single": 2,
+		"sorted": 1,
+		"subscribe": 2,
+		"subscribeOn": 6,
+		"take": 1,
+		"toList": 1,
+		"blockingGet": 1,
+		"blockingSubscribe": 1,
+		"forEach": 1,
+		"fromCallable": 1,
+		"create": 3,
+		"just": 1,
+		"doOnNext": 5,
+		"map": 3,
+		"observeOn": 3,
+		"filter": 2,
+		"flatMap": 2
+	},
+	"zouzhberk-rxjava-study-ebbf0ce/src/main/java/com/github/zouzhberk/study/rxjava2/RxTransformDemo.java": {
+		"fromIterable": 1,
+		"generate": 2,
+		"groupBy": 1,
+		"intervalRange": 1,
+		"map": 5,
+		"ofType": 1,
+		"skip": 1,
+		"subscribe": 10,
+		"timer": 1,
+		"toList": 3,
+		"blockingGet": 1,
+		"window": 1,
+		"cache": 1,
+		"take": 3,
+		"collect": 1,
+		"create": 1,
+		"delay": 1
+	}
+}

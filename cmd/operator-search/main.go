@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -94,6 +95,9 @@ func main() {
 	cfg := config.GetConfigInstance()
 	log.Printf("Starting searching for %s operators", cfg.Distribution)
 
+	flag.BoolVar(&processing.CheckJavaCollectionLike, "checkcollection", false,
+		"indicates if the process should look for imports of Java collection-like libs")
+
 	// loads the extensions related to the analyzed distribution
 	extensions := loadExtensions(cfg)
 
@@ -108,7 +112,7 @@ func main() {
 	countFiles := <-resultChannel
 
 	log.Println("Search for operators finished!")
-	log.Printf("Number of processed files: %d. Writing Results...\n", countFiles)
+	log.Printf("Number of processed files: %d. Writing Results...\n", countFiles/len(operators.GetOperators()))
 	util.WriteFolder(config.OPERATORS_SEARCH_PATH)
 	fileName := fmt.Sprintf("%s_%s", strings.ToLower(cfg.Distribution), strings.Join(cfg.FileExtensions, "-"))
 	util.WriteJSON(
