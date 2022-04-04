@@ -7,6 +7,7 @@ Under the folders in `/assets`, data either genereated by or collected for the s
 
 | Folder   | Description         |
 | :------------- |:-------------|
+| false-positives | Data related to the checking of false positives through Java collection-like libraries |
 | operators-search | Includes the results for the Rx libraries' operator search |
 | operators | Includes JSON files consisting of Rx libraries' operators |
 | repo-retrieval | Contains data about the GitHub repositories retrieved and processed |
@@ -51,6 +52,8 @@ go run cmd/operator-search/main.go
 ```
 &ensp;:floppy_disk: After execution, the result is available at `assets/operators-search`.
 
+> Note: This script also accepts an additional command flag (-checkfalsepositives) which changes the behavior of the search to also inspect files looking for Java collection-like libraries ([Java Streams](https://docs.oracle.com/javase/8/docs/api/java/util/stream/Stream.html), [Eclipse Collections](https://github.com/eclipse/eclipse-collections), [Apache's CollectionUtils](https://commons.apache.org/proper/commons-collections/apidocs/org/apache/commons/collections4/CollectionUtils.html), and [Guava's Collections2](https://guava.dev/releases/23.0/api/docs/com/google/common/collect/Collections2.html)). As explained in the paper, the regex method doesn't guarantee that false positives aren't introduced in the mining process; however, given that Rx can wrap any type of value, we checked Java files, the one with more inspected projects, to make sure that few false positives were being counted. The script prints the files that have both RxJava import and the collection-like libraries at the same time, and the result is already saved at `collection-like_files.txt` file under `assets/false-positives`. In total, 156 files were found and, from those, 16 (10%) were manually verified to check false positives. The list of the 16 sample is available in `assets/false-positives/collection-like_sample.txt` which was generated with the help of [RANDOM.ORG](https://www.random.org/). To help the manual process checking, the script additionally reads this list of 16 files and stores the operators' frequencies (>0), true and false positives, in `assets/false-positives/collection-like_count.txt`. Before executing the script with the flag, the RxJava library must be set in the [configuration](#configuration).
+
 **repo-retrieval**
 
 Script to retrieve the repositories to be mined.
@@ -88,7 +91,7 @@ The majority of the Go scripts depend on entries in a JSON object located in `/c
 ```
 Where:
 * **tokens(array of strings)**: GitHub tokens used mainly in scripts involving GitHub queries. Those tokens are exploited to create workers, so the queries can be executed more quickly. During the paper's executions, we leveraged three GitHub tokens/workers;
-* **distribution(string)**: the distribution (rx library) to be considered in the current execution of some scripts;
+* **distribution(string)**: the distribution/library (RxJava, RxJS, and RxSwift) to be considered in the current execution of some scripts;
 * **min_stars(integer)**: the minimum number of stars to be used in the search for Rx-dependent repositories;
 * **increase_factor(integer)**: used to control the factor by which the star intervals are contructed until reaching the limit (found by issuing a previous query where the number of stars is descendingly sorted). It is also used in the search for Rx-dependent repositories;
 *  **file_extensions(array of strings)**: lists the entries of `Programming_Languages_Extensions.json` file that should be considered in repo-retrieval script. The [Data](#data) section describes the entries leveraged in the paper.
