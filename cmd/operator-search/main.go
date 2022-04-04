@@ -95,8 +95,13 @@ func main() {
 	cfg := config.GetConfigInstance()
 	log.Printf("Starting searching for %s operators", cfg.Distribution)
 
-	flag.BoolVar(&processing.CheckJavaCollectionLike, "checkcollection", false,
+	flag.BoolVar(&processing.CheckFalsePositives, "checkfalsepositives", false,
 		"indicates if the process should look for imports of Java collection-like libs")
+	if processing.CheckFalsePositives {
+		if cfg.Distribution != "RxJava" {
+			log.Fatal("The Rx Distribution(library) must be set to RxJava in the config.json file!")
+		}
+	}
 
 	// loads the extensions related to the analyzed distribution
 	extensions := loadExtensions(cfg)

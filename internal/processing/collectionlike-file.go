@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/carloszimm/github-mining/internal/config"
 	"github.com/iancoleman/orderedmap"
 )
 
@@ -31,7 +32,7 @@ var FilesMap map[string]*orderedmap.OrderedMap
 
 func init() {
 	FilesMap = make(map[string]*orderedmap.OrderedMap)
-	file, err := os.Open(filepath.Join("assets", FILE))
+	file, err := os.Open(filepath.Join(config.FALSE_POSITIVES_PATH, FILE))
 	if err != nil {
 		log.Fatal(err)
 	}

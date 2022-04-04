@@ -13,6 +13,7 @@ var (
 	REPO_RETRIVAL_PATH    = filepath.Join("assets", "repo-retrieval")
 	OPERATORS_PATH        = filepath.Join("assets", "operators")
 	OPERATORS_SEARCH_PATH = filepath.Join("assets", "operators-search")
+	FALSE_POSITIVES_PATH  = filepath.Join("assets", "false-positives")
 )
 var PROCESSING_WORKERS = runtime.NumCPU()
 

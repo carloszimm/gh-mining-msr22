@@ -21,7 +21,7 @@ import (
 	"github.com/iancoleman/orderedmap"
 )
 
-var CheckJavaCollectionLike bool
+var CheckFalsePositives bool
 
 // comment pattern acquired from:
 // https://stackoverflow.com/questions/36725194/golang-regex-replace-excluding-quoted-strings
@@ -175,7 +175,8 @@ func checkImport(in <-chan interface{}, reg *regexp.Regexp) <-chan interface{} {
 		for msg := range in {
 			t := msg.(types.ContentMsg)
 			if reg.MatchString(t.FileContent) {
-				if CheckJavaCollectionLike {
+				if CheckFalsePositives {
+					// checks imports of Java collection-like libs
 					for i, inspectedLib := range InspectedLibs {
 						if inspectedLib.Regex.MatchString(t.FileContent) {
 							fmt.Println(t.InnerFileName)
@@ -186,7 +187,7 @@ func checkImport(in <-chan interface{}, reg *regexp.Regexp) <-chan interface{} {
 				out <- t
 			}
 		}
-		if CheckJavaCollectionLike {
+		if CheckFalsePositives {
 			for i, inspectedLib := range InspectedLibs {
 				fmt.Printf("%s File Count: %d\n", inspectedLib.Name, counts[i])
 			}
@@ -223,9 +224,10 @@ func gatherResults(outOps <-chan interface{}, result *orderedmap.OrderedMap) <-c
 			mapEntry.Set(countMsg.OperatorCount.Operator,
 				count+countMsg.OperatorCount.Total)
 			countFiles++
-			if CheckJavaCollectionLike {
+			if CheckFalsePositives {
 				// accumulates total of operators occurrences in files w/ collection-like libs' imports
 				// used for checking of Java collection-like libs
+				// extremely usabled for sample inspection
 				if elem, ok := FilesMap[countMsg.InnerFileName]; ok {
 					if countMsg.OperatorCount.Total > 0 {
 						elem.Set(countMsg.OperatorCount.Operator, countMsg.OperatorCount.Total)
@@ -234,10 +236,11 @@ func gatherResults(outOps <-chan interface{}, result *orderedmap.OrderedMap) <-c
 			}
 		}
 
-		if CheckJavaCollectionLike {
+		if CheckFalsePositives {
 			// saves ops' count from files w/ collection-like libs' imports in a pretty JSON file
 			// used to facilitate the looking for false positives in those files
-			util.WritePrettyJSON(filepath.Join("assets", "collection-like_count"), FilesMap)
+			util.WritePrettyJSON(filepath.Join(config.FALSE_POSITIVES_PATH, "collection-like_count"),
+				FilesMap)
 		}
 
 		// sort results
