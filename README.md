@@ -1,5 +1,5 @@
 # Github Mining
-Github mining scripts used for the paper:
+Github mining scripts used for the following paper during the 19th International Conference on Mining Software Repositories (MSR '22):
 > Mining the Usage of Reactive Programming APIs: A Mining Study on GitHub and Stack Overflow.
 
 ## Data
