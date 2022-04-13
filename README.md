@@ -2,6 +2,10 @@
 Github mining scripts used for the following paper during the 19th International Conference on Mining Software Repositories (MSR '22):
 > Mining the Usage of Reactive Programming APIs: A Mining Study on GitHub and Stack Overflow.
 
+Complementary scripts, also utilized during the paper production, are available in:
+* [Stack Overflow Mining](https://github.com/carloszimm/so-mining-msr22)
+* [Operators Scraping](https://github.com/carloszimm/rx-scraping-msr22)
+
 ## Data
 Under the folders in `/assets`, data either genereated by or collected for the scripts execution can be found. The table gives a brief description of each folder:
 
