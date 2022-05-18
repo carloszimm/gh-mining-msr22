@@ -22,3 +22,6 @@ checkData.java | src/main/java/com/thepepeyt/databasehelper/database/Objects/row
 
 ## Disclaimer
 All sample files were included in the repository for studying and replication purposes. They have not been altered and shall not be in any future circustances.
+
+# False Positives Checking
+The checking process as done manually with the help of a spreadsheet ([False Positives.xlsx](https://github.com/carloszimm/gh-mining-msr22/blob/main/assets/false-positives/False%20Positives.xlsx)).
